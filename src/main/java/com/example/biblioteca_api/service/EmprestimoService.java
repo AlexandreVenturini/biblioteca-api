@@ -18,6 +18,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Clock;
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -81,8 +82,35 @@ public class EmprestimoService {
     }
 
     public EmprestimoResponse buscarPorId(Long id) {
-        return emprestimoRepository.findById(id)
+        return paraResponse(buscarEmprestimo(id));
+    }
+
+    public EmprestimoResponse devolver(Long id) {
+        Emprestimo emprestimo = buscarEmprestimo(id);
+        if (!emprestimo.isAtivo()) {
+            throw new ConflitoException("O empréstimo " + id + " já foi devolvido");
+        }
+        Leitor leitor = leitorRepository.findById(emprestimo.getLeitorId())
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Leitor", emprestimo.getLeitorId()));
+        PoliticaEmprestimo politica = politicas.get(leitor.getTipo());
+        LocalDate hoje = LocalDate.now(clock);
+        long diasAtraso = ChronoUnit.DAYS.between(emprestimo.getDataPrevistaDevolucao(), hoje);
+
+        emprestimo.setDataDevolucao(hoje);
+        emprestimo.setMulta(politica.calcularMulta(diasAtraso));
+
+        return paraResponse(emprestimoRepository.save(emprestimo));
+    }
+
+    public List<EmprestimoResponse> listarAtrasados() {
+        return emprestimoRepository.findByDataDevolucaoIsNullAndDataPrevistaDevolucaoBefore(LocalDate.now(clock))
+                .stream()
                 .map(this::paraResponse)
+                .toList();
+    }
+
+    private Emprestimo buscarEmprestimo(Long id) {
+        return emprestimoRepository.findById(id)
                 .orElseThrow(() -> new RecursoNaoEncontradoException("Empréstimo", id));
     }
 

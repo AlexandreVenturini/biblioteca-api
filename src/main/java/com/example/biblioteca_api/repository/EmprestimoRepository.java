@@ -14,6 +14,8 @@ public interface EmprestimoRepository {
 
     Emprestimo save(Emprestimo emprestimo);
 
+    List<Emprestimo> findByDataDevolucaoIsNullAndDataPrevistaDevolucaoBefore(LocalDate data);
+
     long countByLivroIdAndDataDevolucaoIsNull(Long livroId);
 
     long countByLeitorIdAndDataDevolucaoIsNull(Long leitorId);

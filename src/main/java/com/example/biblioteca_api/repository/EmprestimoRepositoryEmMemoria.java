@@ -41,6 +41,14 @@ public class EmprestimoRepositoryEmMemoria implements EmprestimoRepository {
     }
 
     @Override
+    public List<Emprestimo> findByDataDevolucaoIsNullAndDataPrevistaDevolucaoBefore(LocalDate data) {
+        return dados.values().stream()
+                .filter(emprestimo -> emprestimo.isAtrasado(data))
+                .sorted(Comparator.comparing(Emprestimo::getId))
+                .toList();
+    }
+
+    @Override
     public long countByLivroIdAndDataDevolucaoIsNull(Long livroId) {
         return dados.values().stream()
                 .filter(emprestimo -> emprestimo.getLivroId().equals(livroId) && emprestimo.isAtivo())
