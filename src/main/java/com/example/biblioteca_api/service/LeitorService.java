@@ -6,6 +6,7 @@ import com.example.biblioteca_api.exception.ConflitoException;
 import com.example.biblioteca_api.exception.RecursoNaoEncontradoException;
 import com.example.biblioteca_api.model.Leitor;
 import com.example.biblioteca_api.model.TipoLeitor;
+import com.example.biblioteca_api.repository.EmprestimoRepository;
 import com.example.biblioteca_api.repository.LeitorRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -18,6 +19,7 @@ import java.util.Objects;
 public class LeitorService {
 
     private final LeitorRepository leitorRepository;
+    private final EmprestimoRepository emprestimoRepository;
 
     public List<LeitorResponse> listar(TipoLeitor tipo) {
         return leitorRepository.findAll().stream()
@@ -52,8 +54,10 @@ public class LeitorService {
     }
 
     public void remover(Long id) {
-        if (!leitorRepository.existsById(id)) {
-            throw new RecursoNaoEncontradoException("Leitor", id);
+        Leitor leitor = buscarLeitor(id);
+        if (emprestimoRepository.existsByLeitorIdAndDataDevolucaoIsNull(id)) {
+            throw new ConflitoException("O leitor " + leitor.getNome()
+                    + " possui empréstimo ativo e não pode ser removido");
         }
         leitorRepository.deleteById(id);
     }
