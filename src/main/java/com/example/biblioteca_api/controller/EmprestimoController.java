@@ -46,4 +46,14 @@ public class EmprestimoController {
     public EmprestimoResponse buscar(@PathVariable Long id) {
         return emprestimoService.buscarPorId(id);
     }
+
+    @PostMapping("/{id}/devolucao")
+    public EmprestimoResponse devolver(@PathVariable Long id) {
+        return emprestimoService.devolver(id);
+    }
+
+    @GetMapping("/atrasados")
+    public List<EmprestimoResponse> listarAtrasados() {
+        return emprestimoService.listarAtrasados();
+    }
 }
