@@ -2,6 +2,8 @@ package com.example.biblioteca_api.service;
 
 import com.example.biblioteca_api.dto.LivroRequest;
 import com.example.biblioteca_api.dto.LivroResponse;
+import com.example.biblioteca_api.exception.ConflitoException;
+import com.example.biblioteca_api.exception.RecursoNaoEncontradoException;
 import com.example.biblioteca_api.model.Livro;
 import com.example.biblioteca_api.repository.LivroRepository;
 import lombok.RequiredArgsConstructor;
@@ -9,7 +11,6 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -26,13 +27,13 @@ public class LivroService {
                 .toList();
     }
 
-    public Optional<LivroResponse> buscarPorId(Long id) {
-        return livroRepository.findById(id).map(this::paraResponse);
+    public LivroResponse buscarPorId(Long id) {
+        return paraResponse(buscarLivro(id));
     }
 
     public LivroResponse cadastrar(LivroRequest request) {
         if (livroRepository.existsByIsbn(request.isbn())) {
-            throw new IllegalStateException("Já existe um livro com o ISBN " + request.isbn());
+            throw new ConflitoException("Já existe um livro com o ISBN " + request.isbn());
         }
         Livro livro = new Livro(null, request.titulo(), request.autor(), request.isbn(),
                 request.anoPublicacao(), request.quantidadeTotal());
@@ -40,29 +41,30 @@ public class LivroService {
         return paraResponse(livroRepository.save(livro));
     }
 
-    public Optional<LivroResponse> atualizar(Long id, LivroRequest request) {
-        return livroRepository.findById(id)
-                .map(livro -> {
-                    if (livroRepository.existsByIsbnAndIdNot(request.isbn(), id)) {
-                        throw new IllegalStateException("Já existe um livro com o ISBN " + request.isbn());
-                    }
-                    livro.setTitulo(request.titulo());
-                    livro.setAutor(request.autor());
-                    livro.setIsbn(request.isbn());
-                    livro.setAnoPublicacao(request.anoPublicacao());
-                    livro.setQuantidadeTotal(request.quantidadeTotal());
+    public LivroResponse atualizar(Long id, LivroRequest request) {
+        Livro livro = buscarLivro(id);
+        if (livroRepository.existsByIsbnAndIdNot(request.isbn(), id)) {
+            throw new ConflitoException("Já existe um livro com o ISBN " + request.isbn());
+        }
+        livro.setTitulo(request.titulo());
+        livro.setAutor(request.autor());
+        livro.setIsbn(request.isbn());
+        livro.setAnoPublicacao(request.anoPublicacao());
+        livro.setQuantidadeTotal(request.quantidadeTotal());
 
-                    return paraResponse(livroRepository.save(livro));
-                });
+        return paraResponse(livroRepository.save(livro));
     }
 
-    public boolean remover(Long id) {
+    public void remover(Long id) {
         if (!livroRepository.existsById(id)) {
-            return false;
+            throw new RecursoNaoEncontradoException("Livro", id);
         }
         livroRepository.deleteById(id);
+    }
 
-        return true;
+    private Livro buscarLivro(Long id) {
+        return livroRepository.findById(id)
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Livro", id));
     }
 
     private LivroResponse paraResponse(Livro livro) {

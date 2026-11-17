@@ -3,7 +3,9 @@ package com.example.biblioteca_api.controller;
 import com.example.biblioteca_api.dto.LivroRequest;
 import com.example.biblioteca_api.dto.LivroResponse;
 import com.example.biblioteca_api.service.LivroService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -13,6 +15,7 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
@@ -27,7 +30,7 @@ public class LivroController {
     private final LivroService livroService;
 
     @PostMapping
-    public ResponseEntity<LivroResponse> cadastrar(@RequestBody LivroRequest request) {
+    public ResponseEntity<LivroResponse> cadastrar(@Valid @RequestBody LivroRequest request) {
         LivroResponse criado = livroService.cadastrar(request);
         URI location = ServletUriComponentsBuilder.fromCurrentRequest()
                 .path("/{id}")
@@ -44,21 +47,18 @@ public class LivroController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<LivroResponse> buscar(@PathVariable Long id) {
-        return ResponseEntity.of(livroService.buscarPorId(id));
+    public LivroResponse buscar(@PathVariable Long id) {
+        return livroService.buscarPorId(id);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<LivroResponse> atualizar(@PathVariable Long id, @RequestBody LivroRequest request) {
-        return ResponseEntity.of(livroService.atualizar(id, request));
+    public LivroResponse atualizar(@PathVariable Long id, @Valid @RequestBody LivroRequest request) {
+        return livroService.atualizar(id, request);
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> remover(@PathVariable Long id) {
-        if (livroService.remover(id)) {
-            return ResponseEntity.noContent().build();
-        }
-
-        return ResponseEntity.notFound().build();
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void remover(@PathVariable Long id) {
+        livroService.remover(id);
     }
 }

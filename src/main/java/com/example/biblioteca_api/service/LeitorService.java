@@ -2,6 +2,8 @@ package com.example.biblioteca_api.service;
 
 import com.example.biblioteca_api.dto.LeitorRequest;
 import com.example.biblioteca_api.dto.LeitorResponse;
+import com.example.biblioteca_api.exception.ConflitoException;
+import com.example.biblioteca_api.exception.RecursoNaoEncontradoException;
 import com.example.biblioteca_api.model.Leitor;
 import com.example.biblioteca_api.model.TipoLeitor;
 import com.example.biblioteca_api.repository.LeitorRepository;
@@ -10,7 +12,6 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -25,39 +26,40 @@ public class LeitorService {
                 .toList();
     }
 
-    public Optional<LeitorResponse> buscarPorId(Long id) {
-        return leitorRepository.findById(id).map(LeitorResponse::de);
+    public LeitorResponse buscarPorId(Long id) {
+        return LeitorResponse.de(buscarLeitor(id));
     }
 
     public LeitorResponse cadastrar(LeitorRequest request) {
         if (leitorRepository.existsByEmailIgnoreCase(request.email())) {
-            throw new IllegalStateException("Já existe um leitor com o e-mail " + request.email());
+            throw new ConflitoException("Já existe um leitor com o e-mail " + request.email());
         }
         Leitor leitor = new Leitor(null, request.nome(), request.email(), request.tipo());
 
         return LeitorResponse.de(leitorRepository.save(leitor));
     }
 
-    public Optional<LeitorResponse> atualizar(Long id, LeitorRequest request) {
-        return leitorRepository.findById(id)
-                .map(leitor -> {
-                    if (leitorRepository.existsByEmailIgnoreCaseAndIdNot(request.email(), id)) {
-                        throw new IllegalStateException("Já existe um leitor com o e-mail " + request.email());
-                    }
-                    leitor.setNome(request.nome());
-                    leitor.setEmail(request.email());
-                    leitor.setTipo(request.tipo());
+    public LeitorResponse atualizar(Long id, LeitorRequest request) {
+        Leitor leitor = buscarLeitor(id);
+        if (leitorRepository.existsByEmailIgnoreCaseAndIdNot(request.email(), id)) {
+            throw new ConflitoException("Já existe um leitor com o e-mail " + request.email());
+        }
+        leitor.setNome(request.nome());
+        leitor.setEmail(request.email());
+        leitor.setTipo(request.tipo());
 
-                    return LeitorResponse.de(leitorRepository.save(leitor));
-                });
+        return LeitorResponse.de(leitorRepository.save(leitor));
     }
 
-    public boolean remover(Long id) {
+    public void remover(Long id) {
         if (!leitorRepository.existsById(id)) {
-            return false;
+            throw new RecursoNaoEncontradoException("Leitor", id);
         }
         leitorRepository.deleteById(id);
+    }
 
-        return true;
+    private Leitor buscarLeitor(Long id) {
+        return leitorRepository.findById(id)
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Leitor", id));
     }
 }

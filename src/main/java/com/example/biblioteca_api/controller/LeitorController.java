@@ -4,7 +4,9 @@ import com.example.biblioteca_api.dto.LeitorRequest;
 import com.example.biblioteca_api.dto.LeitorResponse;
 import com.example.biblioteca_api.model.TipoLeitor;
 import com.example.biblioteca_api.service.LeitorService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -14,6 +16,7 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
@@ -28,7 +31,7 @@ public class LeitorController {
     private final LeitorService leitorService;
 
     @PostMapping
-    public ResponseEntity<LeitorResponse> cadastrar(@RequestBody LeitorRequest request) {
+    public ResponseEntity<LeitorResponse> cadastrar(@Valid @RequestBody LeitorRequest request) {
         LeitorResponse criado = leitorService.cadastrar(request);
         URI location = ServletUriComponentsBuilder.fromCurrentRequest()
                 .path("/{id}")
@@ -44,21 +47,18 @@ public class LeitorController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<LeitorResponse> buscar(@PathVariable Long id) {
-        return ResponseEntity.of(leitorService.buscarPorId(id));
+    public LeitorResponse buscar(@PathVariable Long id) {
+        return leitorService.buscarPorId(id);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<LeitorResponse> atualizar(@PathVariable Long id, @RequestBody LeitorRequest request) {
-        return ResponseEntity.of(leitorService.atualizar(id, request));
+    public LeitorResponse atualizar(@PathVariable Long id, @Valid @RequestBody LeitorRequest request) {
+        return leitorService.atualizar(id, request);
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> remover(@PathVariable Long id) {
-        if (leitorService.remover(id)) {
-            return ResponseEntity.noContent().build();
-        }
-
-        return ResponseEntity.notFound().build();
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void remover(@PathVariable Long id) {
+        leitorService.remover(id);
     }
 }
