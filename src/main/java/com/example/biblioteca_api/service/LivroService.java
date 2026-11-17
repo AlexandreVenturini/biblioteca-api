@@ -5,6 +5,7 @@ import com.example.biblioteca_api.dto.LivroResponse;
 import com.example.biblioteca_api.exception.ConflitoException;
 import com.example.biblioteca_api.exception.RecursoNaoEncontradoException;
 import com.example.biblioteca_api.model.Livro;
+import com.example.biblioteca_api.repository.EmprestimoRepository;
 import com.example.biblioteca_api.repository.LivroRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -17,6 +18,7 @@ import java.util.Objects;
 public class LivroService {
 
     private final LivroRepository livroRepository;
+    private final EmprestimoRepository emprestimoRepository;
 
     public List<LivroResponse> listar(String autor, Boolean disponivel) {
         return livroRepository.findAll().stream()
@@ -46,6 +48,11 @@ public class LivroService {
         if (livroRepository.existsByIsbnAndIdNot(request.isbn(), id)) {
             throw new ConflitoException("Já existe um livro com o ISBN " + request.isbn());
         }
+        long ativos = emprestimoRepository.countByLivroIdAndDataDevolucaoIsNull(id);
+        if (request.quantidadeTotal() < ativos) {
+            throw new ConflitoException("A quantidade total não pode ser menor que os "
+                    + ativos + " empréstimos ativos do livro");
+        }
         livro.setTitulo(request.titulo());
         livro.setAutor(request.autor());
         livro.setIsbn(request.isbn());
@@ -56,8 +63,10 @@ public class LivroService {
     }
 
     public void remover(Long id) {
-        if (!livroRepository.existsById(id)) {
-            throw new RecursoNaoEncontradoException("Livro", id);
+        Livro livro = buscarLivro(id);
+        if (emprestimoRepository.existsByLivroIdAndDataDevolucaoIsNull(id)) {
+            throw new ConflitoException("O livro " + livro.getTitulo()
+                    + " possui empréstimo ativo e não pode ser removido");
         }
         livroRepository.deleteById(id);
     }
@@ -72,6 +81,8 @@ public class LivroService {
     }
 
     private int calcularQuantidadeDisponivel(Livro livro) {
-        return livro.getQuantidadeTotal();
+        long ativos = emprestimoRepository.countByLivroIdAndDataDevolucaoIsNull(livro.getId());
+
+        return (int) (livro.getQuantidadeTotal() - ativos);
     }
 }
